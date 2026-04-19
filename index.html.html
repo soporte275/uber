@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis Forense · Caso Uber/Plataformas · Panamá 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --negro: #0a0a0a;
+    --rojo: #c0392b;
+    --rojo-vivo: #e74c3c;
+    --amarillo: #f39c12;
+    --crema: #f5f0e8;
+    --gris-oscuro: #1a1a1a;
+    --gris-medio: #2d2d2d;
+    --gris-texto: #8a8a8a;
+    --blanco: #ffffff;
+    --verde-alerta: #27ae60;
+    --naranja: #e67e22;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--negro);
+    color: var(--crema);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER CLASIFICADO ── */
+  .clasificado-band {
+    background: var(--rojo);
+    color: white;
+    text-align: center;
+    padding: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    animation: pulse-band 2s ease-in-out infinite;
+  }
+  @keyframes pulse-band { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+  header {
+    background: var(--gris-oscuro);
+    border-bottom: 1px solid #333;
+    padding: 40px 60px 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 10px,
+      rgba(192,57,43,0.03) 10px,
+      rgba(192,57,43,0.03) 20px
+    );
+    pointer-events: none;
+  }
+
+  .header-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--rojo);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--crema);
+    max-width: 800px;
+  }
+
+  header h1 span { color: var(--rojo-vivo); }
+
+  .header-sub {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--gris-texto);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .ficha-tecnica {
+    display: flex;
+    gap: 32px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .ficha-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ficha-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--gris-texto);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .ficha-valor {
+    font-size: 13px;
+    color: var(--crema);
+    font-weight: 600;
+  }
+
+  /* ── NAV TABS ── */
+  nav {
+    background: var(--gris-oscuro);
+    border-bottom: 1px solid #333;
+    padding: 0 60px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav button {
+    background: none;
+    border: none;
+    color: var(--gris-texto);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 18px 20px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all .25s;
+    white-space: nowrap;
+  }
+  nav button:hover { color: var(--crema); }
+  nav button.active {
+    color: var(--rojo-vivo);
+    border-bottom-color: var(--rojo-vivo);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 60px 60px; }
+
+  .section { display: none; animation: fadeIn .4s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── COMPONENTES ── */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--crema);
+  }
+  .section-title span { color: var(--rojo-vivo); }
+  .section-intro {
+    color: var(--gris-texto);
+    font-size: 14px;
+    margin-bottom: 40px;
+    max-width: 680px;
+    line-height: 1.7;
+  }
+
+  /* ─ TIMELINE ─ */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--rojo), transparent);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 36px;
+    opacity: 0;
+    transform: translateX(-20px);
+    animation: slideIn .5s ease forwards;
+  }
+  .tl-item:nth-child(1){animation-delay:.1s}
+  .tl-item:nth-child(2){animation-delay:.2s}
+  .tl-item:nth-child(3){animation-delay:.3s}
+  .tl-item:nth-child(4){animation-delay:.4s}
+  .tl-item:nth-child(5){animation-delay:.5s}
+  .tl-item:nth-child(6){animation-delay:.6s}
+  @keyframes slideIn{to{opacity:1;transform:translateX(0)}}
+  .tl-dot {
+    position: absolute;
+    left: -28px; top: 6px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--rojo);
+    border: 2px solid var(--negro);
+  }
+  .tl-dot.hot { background: var(--amarillo); animation: blink 1s infinite; }
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .tl-fecha {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--rojo);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .tl-titulo {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--crema);
+    margin-bottom: 6px;
+  }
+  .tl-desc {
+    font-size: 13px;
+    color: var(--gris-texto);
+    line-height: 1.65;
+  }
+  .tl-tag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .tag-legal { background: rgba(192,57,43,.2); color: var(--rojo-vivo); border: 1px solid rgba(192,57,43,.3); }
+  .tag-politico { background: rgba(243,156,18,.15); color: var(--amarillo); border: 1px solid rgba(243,156,18,.3); }
+  .tag-economico { background: rgba(39,174,96,.15); color: #27ae60; border: 1px solid rgba(39,174,96,.3); }
+  .tag-critico { background: rgba(231,76,60,.3); color: #fff; border: 1px solid #e74c3c; }
+
+  /* ─ CARDS GRID ─ */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+
+  .card {
+    background: var(--gris-medio);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 24px;
+    position: relative;
+    transition: border-color .2s, transform .2s;
+  }
+  .card:hover { border-color: var(--rojo); transform: translateY(-2px); }
+  .card-accent {
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: 4px 0 0 4px;
+  }
+  .accent-rojo { background: var(--rojo); }
+  .accent-amarillo { background: var(--amarillo); }
+  .accent-verde { background: var(--verde-alerta); }
+  .accent-naranja { background: var(--naranja); }
+  .accent-gris { background: #555; }
+
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .card-titulo {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--crema);
+    margin-bottom: 8px;
+  }
+  .card-subtitulo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--gris-texto);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .card-texto {
+    font-size: 12.5px;
+    color: #aaa;
+    line-height: 1.7;
+  }
+  .card-riesgo {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+  }
+  .riesgo-badge {
+    padding: 3px 10px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 9px;
+  }
+  .riesgo-alto { background: rgba(192,57,43,.3); color: #e74c3c; }
+  .riesgo-medio { background: rgba(243,156,18,.2); color: var(--amarillo); }
+  .riesgo-bajo { background: rgba(39,174,96,.15); color: #27ae60; }
+
+  /* ─ PROCESO INVESTIGACIÓN ─ */
+  .proceso-steps {
+    counter-reset: step;
+  }
+  .step-item {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+    align-items: start;
+  }
+  .step-num {
+    width: 60px; height: 60px;
+    border: 2px solid var(--rojo);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--rojo);
+    flex-shrink: 0;
+  }
+  .step-content { padding-top: 8px; }
+  .step-titulo {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--crema);
+    margin-bottom: 8px;
+  }
+  .step-texto {
+    font-size: 13px;
+    color: #aaa;
+    line-height: 1.7;
+  }
+  .step-items-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .step-items-list li {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--gris-texto);
+    list-style: none;
+    padding-left: 16px;
+    position: relative;
+  }
+  .step-items-list li::before {
+    content: '›';
+    position: absolute; left: 0;
+    color: var(--rojo);
+  }
+
+  /* ─ CONFLICTOS DE INTERÉS ─ */
+  .conflicto-card {
+    background: var(--gris-medio);
+    border: 1px solid rgba(192,57,43,.3);
+    border-radius: 4px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .conflicto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .conflicto-nombre {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--crema);
+  }
+  .conflicto-rol {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--gris-texto);
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+  .nivel-badge {
+    padding: 4px 14px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nivel-critico { background: rgba(231,76,60,.3); color: #e74c3c; border: 1px solid #e74c3c; }
+  .nivel-alto { background: rgba(231,120,22,.25); color: var(--naranja); border: 1px solid var(--naranja); }
+  .nivel-moderado { background: rgba(243,156,18,.2); color: var(--amarillo); border: 1px solid var(--amarillo); }
+  .nivel-bajo { background: rgba(39,174,96,.15); color: #27ae60; border: 1px solid #27ae60; }
+
+  .conflicto-desc {
+    font-size: 13px;
+    color: #aaa;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .preguntas-clave {
+    background: rgba(192,57,43,.07);
+    border-left: 3px solid var(--rojo);
+    padding: 12px 16px;
+    margin-top: 12px;
+    border-radius: 0 4px 4px 0;
+  }
+  .preguntas-clave h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--rojo);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .preguntas-clave li {
+    font-size: 12.5px;
+    color: #aaa;
+    list-style: none;
+    padding: 3px 0 3px 16px;
+    position: relative;
+  }
+  .preguntas-clave li::before {
+    content: '?';
+    position: absolute; left: 0;
+    color: var(--rojo);
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+
+  /* ─ CONCLUSIONES ─ */
+  .conclusion-box {
+    background: linear-gradient(135deg, rgba(192,57,43,.1), rgba(192,57,43,.03));
+    border: 1px solid rgba(192,57,43,.3);
+    border-radius: 4px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .conclusion-titulo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--rojo-vivo);
+    margin-bottom: 12px;
+  }
+  .conclusion-texto {
+    font-size: 13.5px;
+    color: #bbb;
+    line-height: 1.8;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .stat-box {
+    background: var(--gris-medio);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--rojo-vivo);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--gris-texto);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* ─ SEPARADOR ─ */
+  .divider {
+    border: none;
+    border-top: 1px solid #2a2a2a;
+    margin: 36px 0;
+  }
+
+  .alert-box {
+    background: rgba(231,76,60,.1);
+    border: 1px solid rgba(231,76,60,.4);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .alert-text { font-size: 13px; color: #ddd; line-height: 1.6; }
+  .alert-text strong { color: var(--rojo-vivo); }
+
+  /* ─ FOOTER ─ */
+  footer {
+    background: var(--gris-oscuro);
+    border-top: 1px solid #222;
+    padding: 24px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+    gap: 12px;
+  }
+  .footer-brand {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 1px;
+  }
+  .footer-brand strong { color: var(--rojo); }
+
+  @media(max-width:768px){
+    header, main, nav, footer { padding-left: 20px; padding-right: 20px; }
+    .step-item { grid-template-columns: 48px 1fr; gap: 16px; }
+    .ficha-tecnica { gap: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="clasificado-band">⚠ ANÁLISIS FORENSE — DOCUMENTO DE INVESTIGACIÓN — PANAMÁ · ABRIL 2026 ⚠</div>
+
+<header>
+  <div class="header-meta">Caso N.° 001-2026 · Sector Transporte · Plataformas Digitales</div>
+  <h1>Crisis Regulatoria:<br><span>Uber & Plataformas</span><br>en Panamá</h1>
+  <p class="header-sub">Decreto Ejecutivo N.° 10 del 16 de abril de 2026 · Investigación de fondo, actores, conflictos e intereses</p>
+  <div class="ficha-tecnica">
+    <div class="ficha-item">
+      <span class="ficha-label">Decreto</span>
+      <span class="ficha-valor">Ejecutivo N.° 10 / 2026</span>
+    </div>
+    <div class="ficha-item">
+      <span class="ficha-label">Emisor</span>
+      <span class="ficha-valor">Pres. José Raúl Mulino</span>
+    </div>
+    <div class="ficha-item">
+      <span class="ficha-label">Afectados directos</span>
+      <span class="ficha-valor">~150,000+ conductores</span>
+    </div>
+    <div class="ficha-item">
+      <span class="ficha-label">Estado</span>
+      <span class="ficha-valor" style="color:var(--amarillo)">🟡 Bajo revisión presidencial</span>
+    </div>
+    <div class="ficha-item">
+      <span class="ficha-label">Autor del análisis</span>
+      <span class="ficha-valor">AST System Computer Technology</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showSection('contexto', this)">01 · Contexto</button>
+  <button onclick="showSection('timeline', this)">02 · Línea de Tiempo</button>
+  <button onclick="showSection('actores', this)">03 · Actores</button>
+  <button onclick="showSection('proceso', this)">04 · Proceso Investigativo</button>
+  <button onclick="showSection('conflictos', this)">05 · Conflictos de Interés</button>
+  <button onclick="showSection('conclusiones', this)">06 · Conclusiones</button>
+</nav>
+
+<main>
+
+  <!-- ══════ 01 CONTEXTO ══════ -->
+  <div class="section active" id="contexto">
+    <h2 class="section-title">El <span>Caso</span> en Perspectiva</h2>
+    <p class="section-intro">
+      El Decreto Ejecutivo N.° 10 del 16 de abril de 2026 relanzó uno de los conflictos más persistentes de la política panameña: la disputa entre el modelo de transporte tradicional y las plataformas digitales. Lo que se vende como modernización esconde una red de intereses económicos, presiones gremiales, vacíos legales heredados y posibles beneficiarios ocultos.
+    </p>
+
+    <div class="alert-box">
+      <div class="alert-icon">🔴</div>
+      <div class="alert-text">
+        <strong>ALERTA CRÍTICA:</strong> El presidente Mulino anunció el 18 de abril de 2026 que revisará el decreto, luego de un alud de críticas ciudadanas, advertencias de plataformas y cuestionamientos políticos. Se convocó reunión de emergencia para el lunes 20 de abril con la ATTT y el Ministerio de Gobierno. El sistema está en <strong>punto de quiebre regulatorio</strong>.
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="stat-num">9</div>
+        <div class="stat-label">Años de vacío<br>regulatorio (2017–2026)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">95%</div>
+        <div class="stat-label">Conductores afectados<br>según inDrive</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">3</div>
+        <div class="stat-label">Plataformas principales<br>Uber · DiDi · inDrive</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">7</div>
+        <div class="stat-label">Años máximos de<br>antigüedad del vehículo</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">10</div>
+        <div class="stat-label">Años de récord policivo<br>exigido al conductor</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:20px;color:var(--crema)">¿Qué establece el Decreto N.° 10?</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-accent accent-rojo"></div>
+        <div class="card-icon">🚕</div>
+        <div class="card-titulo">Reclasificación del Servicio</div>
+        <div class="card-subtitulo">Impacto estructural</div>
+        <div class="card-texto">Las plataformas como Uber, DiDi e inDrive pasan a operar bajo la categoría de <strong style="color:var(--crema)">"Taxi de Lujo (TL)"</strong>, integrándose al sistema de transporte selectivo regulado por la ATTT, que fija tarifas y expide certificaciones.</div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-amarillo"></div>
+        <div class="card-icon">📋</div>
+        <div class="card-titulo">Requisitos para Conductores</div>
+        <div class="card-subtitulo">Nuevas exigencias</div>
+        <div class="card-texto">Ser panameño · Licencia tipo E-1 · Récord policivo limpio en los últimos <strong style="color:var(--crema)">10 años</strong> · Paz y salvo por infracciones · Vinculación obligatoria a una organización prestataria de transporte autorizada.</div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-naranja"></div>
+        <div class="card-icon">🚗</div>
+        <div class="card-titulo">Requisitos de Vehículos</div>
+        <div class="card-subtitulo">Condiciones mínimas</div>
+        <div class="card-texto">Antigüedad máxima de <strong style="color:var(--crema)">7 años</strong> al inicio de operaciones · Aire acondicionado · Cinturones de seguridad · Placa y calcomanía "TL" con nomenclatura de zona · Pago electrónico obligatorio.</div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-verde"></div>
+        <div class="card-icon">🏛️</div>
+        <div class="card-titulo">Rol de las Plataformas</div>
+        <div class="card-subtitulo">Reducción de poder</div>
+        <div class="card-texto">Las apps quedan relegadas a <strong style="color:var(--crema)">intermediarias tecnológicas</strong>. No podrán administrar directamente los certificados de operación. La ATTT controla registros, tarifas y fiscalización en todo el país.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 02 LÍNEA DE TIEMPO ══════ -->
+  <div class="section" id="timeline">
+    <h2 class="section-title">Línea de <span>Tiempo</span> del Conflicto</h2>
+    <p class="section-intro">Un conflicto de casi una década, marcado por decretos inconstitucionales, vacíos legales aprovechados y presiones de múltiples grupos de poder.</p>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">2015–2016</div>
+        <div class="tl-titulo">Llegada de Uber a Panamá</div>
+        <div class="tl-desc">Uber comienza operaciones sin marco legal específico, en zona gris regulatoria. Genera inmediata tensión con taxistas tradicionales y gremios del transporte que exigen su prohibición. El Estado no actúa.</div>
+        <div><span class="tl-tag tag-economico">Inicio del conflicto</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">2017</div>
+        <div class="tl-titulo">Decreto 331: El primer intento fallido</div>
+        <div class="tl-desc">El gobierno intenta regular Uber mediante el Decreto 331. El sector transporte tradicional lo rechaza tachándolo de "legalizar por otro canal" lo que perciben como competencia desleal. Gremios presentan demanda de inconstitucionalidad.</div>
+        <div><span class="tl-tag tag-legal">Decreto 331 de 2017</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">2018–2022</div>
+        <div class="tl-titulo">La Corte Suprema actúa: inconstitucionalidad</div>
+        <div class="tl-desc">La Corte Suprema de Justicia declara inconstitucional la mayoría de los artículos del Decreto 331 de 2017, al estimar que no respetaba la Ley 14 de 1993 que rige el transporte terrestre. Panamá vuelve al vacío legal. Uber, DiDi e inDrive continúan operando sin regulación clara.</div>
+        <div><span class="tl-tag tag-legal">Fallo de inconstitucionalidad</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">2023</div>
+        <div class="tl-titulo">Proyecto de Ley rechazado por las plataformas</div>
+        <div class="tl-desc">Se debate una propuesta legislativa que Uber califica de "inviable", argumentando que impondría cargas económicas que los conductores no pueden asumir: certificados de operación costosos y renovación forzada de vehículos cada 3 años.</div>
+        <div><span class="tl-tag tag-politico">Presión de Uber ante la AN</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">Marzo–Abril 2026</div>
+        <div class="tl-titulo">Negociaciones aceleradas y reuniones con la ATTT</div>
+        <div class="tl-desc">Conductores de plataformas digitales sostienen conversaciones directas con el director de la ATTT, Nicolás Brea, solicitando regulación e inclusión en el subsidio de combustible. El proceso se acelera de forma inusual sin participación pública.</div>
+        <div><span class="tl-tag tag-politico">Cabildeo acelerado</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">16 Abril 2026</div>
+        <div class="tl-titulo">Decreto Ejecutivo N.° 10: La bomba regulatoria</div>
+        <div class="tl-desc">Mulino firma el Decreto N.° 10. Uber, inDrive y DiDi quedan reclasificadas como "Taxi de Lujo (TL)". La ATTT asume control total. Las plataformas reaccionan con alarma. inDrive advierte que afecta al 95% de conductores. Estalla el debate nacional.</div>
+        <div><span class="tl-tag tag-critico">DECRETO N.° 10 FIRMADO</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-fecha">17 Abril 2026</div>
+        <div class="tl-titulo">Reacciones y primer quiebre político</div>
+        <div class="tl-desc">El alcalde de Panamá, Mayer Mizrachi, critica el decreto públicamente: "en vez de subir a los taxis al nivel de Uber, bajan a Uber al nivel del taxi." La Cámara de Comercio Digital lo califica de anacrónico. Se convoca protesta de conductores.</div>
+        <div><span class="tl-tag tag-politico">Crisis política</span></div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot hot"></div>
+        <div class="tl-fecha">18 Abril 2026 · HOY</div>
+        <div class="tl-titulo">Mulino anuncia revisión del decreto ⚡</div>
+        <div class="tl-desc">Ante la tormenta de críticas, el presidente Mulino anuncia en X que revisará el decreto y convoca reunión para el lunes 20 de abril con ATTT y Ministerio de Gobierno. Se planea un "apagón de servicio" de conductores para el mismo lunes.</div>
+        <div><span class="tl-tag tag-critico">PUNTO DE QUIEBRE ACTIVO</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 03 ACTORES ══════ -->
+  <div class="section" id="actores">
+    <h2 class="section-title">Mapa de <span>Actores</span></h2>
+    <p class="section-intro">El conflicto involucra múltiples partes con intereses divergentes. Identificar sus posiciones, incentivos y poder real es clave para entender la dinámica política detrás del decreto.</p>
+
+    <h3 style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--rojo);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px">Actores Gubernamentales</h3>
+    <div class="grid-2" style="margin-bottom:32px">
+      <div class="card">
+        <div class="card-accent accent-rojo"></div>
+        <div class="card-titulo">José Raúl Mulino</div>
+        <div class="card-subtitulo">Presidente de la República</div>
+        <div class="card-texto">Firma el decreto, luego cede ante la presión pública prometiendo revisión. Su postura oscila entre defender la "modernización" del transporte y no perjudicar a ningún sector. Políticamente vulnerable al debate.</div>
+        <div class="card-riesgo"><span style="color:var(--gris-texto)">Posición:</span><span class="riesgo-badge riesgo-medio">Ambigua</span></div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-naranja"></div>
+        <div class="card-titulo">Dinoska Montalvo</div>
+        <div class="card-subtitulo">Ministra de Gobierno</div>
+        <div class="card-texto">Defensora activa del decreto. Argumenta que atiende un mandato de la Corte Suprema y ordena un sector "parcialmente ilegal". Presenta el decreto como producto de 13 meses de trabajo con el sector transporte — mayormente gremios tradicionales.</div>
+        <div class="card-riesgo"><span style="color:var(--gris-texto)">Posición:</span><span class="riesgo-badge riesgo-alto">Pro-decreto</span></div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-amarillo"></div>
+        <div class="card-titulo">Nicolás Brea</div>
+        <div class="card-subtitulo">Director ATTT</div>
+        <div class="card-texto">Califica el decreto como "avance histórico". Su institución gana poder regulatorio masivo: controla registros, tarifas y fiscalización de todas las plataformas. La ATTT pasa de ser observadora a árbitro total del mercado.</div>
+        <div class="card-riesgo"><span style="color:var(--gris-texto)">Beneficio institucional:</span><span class="riesgo-badge riesgo-alto">Alto</span></div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-verde"></div>
+        <div class="card-titulo">Mayer Mizrachi</div>
+        <div class="card-subtitulo">Alcalde de la Ciudad de Panamá</div>
+        <div class="card-texto">Crítico abierto del decreto. Afirma que "castiga la innovación" y anuncia su propio proyecto de app para modernizar taxis. Postura populista y pro-tecnología que contrasta con la visión del gobierno central.</div>
+        <div class="card-riesgo"><span style="color:var(--gris-texto)">Posición:</span><span class="riesgo-badge riesgo-bajo">Anti-decreto</span></div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--rojo);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px">Actores Privados / Plataformas</h3>
+    <div class="grid-3" style="margin-bottom:32px">
+      <div class="card">
+        <div class="card-accent accent-rojo"></div>
+        <div class="card-icon">🚘</div>
+        <div class="card-titulo">Uber</div>
+        <div class="card-subtitulo">Plataforma — Posición cautelosa</div>
+        <div class="card-texto">Reacción medida: "evaluará" si los taxis de lujo pueden integrarse a su app. No rechaza ni acepta el decreto. Históricamente ha presionado para evitar regulaciones onerosas para conductores.</div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-naranja"></div>
+        <div class="card-icon">📱</div>
+        <div class="card-titulo">inDrive</div>
+        <div class="card-subtitulo">Plataforma — Oposición directa</div>
+        <div class="card-texto">La más crítica. Advierte que el 95%+ de sus conductores serían afectados. Su modelo de negociación directa entre conductor y pasajero entra en conflicto con el esquema de tarifas fijas de la ATTT.</div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-gris"></div>
+        <div class="card-icon">🚖</div>
+        <div class="card-titulo">DiDi</div>
+        <div class="card-subtitulo">Plataforma — Sin pronunciamiento</div>
+        <div class="card-texto">Ha operado en Panamá sin regulación clara junto a Uber e inDrive. Su ausencia en el debate público puede ser estratégica: negociación silenciosa con las autoridades para condiciones preferenciales.</div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--rojo);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px">Actores Gremiales y Sociedad Civil</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-accent accent-amarillo"></div>
+        <div class="card-titulo">Gremios de Transporte Tradicional</div>
+        <div class="card-subtitulo">Ganadores potenciales del decreto</div>
+        <div class="card-texto">Taxistas y organizaciones prestatarias que durante años presionaron para eliminar o limitar a Uber. El decreto los fortalece al exigir que los conductores de plataformas se vinculen a sus estructuras gremiales para operar.</div>
+        <div class="card-riesgo"><span style="color:var(--gris-texto)">Beneficio percibido:</span><span class="riesgo-badge riesgo-alto">Alto</span></div>
+      </div>
+      <div class="card">
+        <div class="card-accent accent-verde"></div>
+        <div class="card-titulo">Cámara de Comercio Digital y Blockchain</div>
+        <div class="card-subtitulo">Rodrigo Icaza — Voz crítica técnica</div>
+        <div class="card-texto">Señala que el decreto usa como base la Ley 14 de 1993, anterior a la existencia del internet en Panamá. Argumenta que es imposible regular la economía digital con marcos legales analógicos.</div>
+        <div class="card-riesgo"><span style="color:var(--gris-texto)">Posición:</span><span class="riesgo-badge riesgo-bajo">Anti-decreto</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 04 PROCESO INVESTIGATIVO ══════ -->
+  <div class="section" id="proceso">
+    <h2 class="section-title">Proceso de <span>Investigación</span></h2>
+    <p class="section-intro">Un análisis forense riguroso del Decreto N.° 10 requiere seguir una metodología estructurada en fases. A continuación se describe el proceso investigativo recomendado para determinar si existe captura regulatoria, corrupción o conflicto de interés en la emisión de este decreto.</p>
+
+    <div class="proceso-steps">
+      <div class="step-item">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-titulo">Análisis Documental del Decreto</div>
+          <div class="step-texto">Revisar el texto completo del Decreto Ejecutivo N.° 10 del 16 de abril de 2026, sus considerandos, base legal invocada y articulado. Comparar con el Decreto 331 de 2017 y la Ley 14 de 1993.</div>
+          <ul class="step-items-list">
+            <li>Identificar si el decreto cumple con la jerarquía normativa panameña</li>
+            <li>Verificar si excede las facultades del Ejecutivo sin aval de la Asamblea Nacional</li>
+            <li>Analizar si el mandato de la Corte Suprema se usa como pretexto o es genuino</li>
+            <li>Revisar la exposición de motivos y quién la redactó</li>
+            <li>Solicitar vía acceso a la información los borradores previos del decreto</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-titulo">Auditoría del Proceso de Consulta Previa</div>
+          <div class="step-texto">La ministra Montalvo afirma que hubo "13 meses de trabajo con el sector transporte". Es crítico determinar quiénes participaron realmente y quiénes fueron excluidos deliberadamente del proceso de elaboración.</div>
+          <ul class="step-items-list">
+            <li>Solicitar actas y memorias de todas las reuniones de consulta realizadas</li>
+            <li>Identificar qué gremios de transporte tradicional tuvieron acceso preferente</li>
+            <li>Verificar si Uber, inDrive y DiDi fueron formalmente consultadas</li>
+            <li>Determinar si conductores independientes fueron incluidos en las mesas</li>
+            <li>Cruzar fechas de reuniones con movimientos de cabildeo ante la ATTT</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-titulo">Trazabilidad Financiera de Gremios de Transporte</div>
+          <div class="step-texto">Los gremios de transporte tradicional son los mayores beneficiarios del decreto, pues los conductores de plataformas deberán afiliarse a sus organizaciones prestatarias para operar legalmente. Esto representa un flujo de cuotas e ingresos significativos.</div>
+          <ul class="step-items-list">
+            <li>Identificar los líderes de los principales gremios de transporte (CONATRAUPA, sindicatos afines)</li>
+            <li>Revisar sus vínculos con funcionarios del Ministerio de Gobierno y ATTT</li>
+            <li>Investigar si hay aportes de campaña política o donaciones hacia partidos en el poder</li>
+            <li>Analizar cuánto dinero generarían las cuotas de los nuevos conductores afiliados</li>
+            <li>Solicitar declaraciones juradas de bienes de Nicolás Brea y Dinoska Montalvo</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <div class="step-titulo">Investigación de Conflictos de Interés Institucionales</div>
+          <div class="step-texto">La ATTT pasa de regulador pasivo a árbitro total con poder de fijar tarifas, otorgar certificaciones y fiscalizar a todas las plataformas. Este salto de poder regulatorio sin precedente debe ser auditado.</div>
+          <ul class="step-items-list">
+            <li>Revisar el historial laboral y profesional del director Nicolás Brea</li>
+            <li>Investigar vínculos del director de ATTT con gremios de transporte tradicional</li>
+            <li>Analizar si existen contratos o concesiones adjudicadas a empresas vinculadas a funcionarios</li>
+            <li>Revisar si la ATTT tiene capacidad operativa real para fiscalizar cientos de miles de conductores</li>
+            <li>Determinar quién se beneficia del sistema de certificados de operación (tasas, trámites)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">05</div>
+        <div class="step-content">
+          <div class="step-titulo">Análisis Comparado de Impacto Económico</div>
+          <div class="step-texto">El decreto introduce barreras de entrada que afectarían desproporcionalmente a conductores de menores ingresos. Es necesario cuantificar el impacto real y compararlo con casos similares en la región.</div>
+          <ul class="step-items-list">
+            <li>Estimar el costo total del cumplimiento para un conductor promedio (certificados, vehículo, placa TL)</li>
+            <li>Comparar con regulaciones de Colombia, Costa Rica y México para plataformas digitales</li>
+            <li>Analizar el impacto en el empleo informal en un contexto de alta desocupación</li>
+            <li>Calcular el efecto en tarifas al usuario final si se reduce la oferta de conductores</li>
+            <li>Evaluar si la fijación de tarifas por la ATTT elimina la competencia en precios</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">06</div>
+        <div class="step-content">
+          <div class="step-titulo">Revisión de la Constitucionalidad del Decreto</div>
+          <div class="step-texto">Dado que el Decreto 331 de 2017 fue mayormente declarado inconstitucional, existe una alta probabilidad de que el Decreto N.° 10 enfrente el mismo destino si no respeta la Ley 14 de 1993 y los límites constitucionales del Ejecutivo.</div>
+          <ul class="step-items-list">
+            <li>Determinar si la fijación de tarifas por decreto ejecutivo requiere ley formal de la AN</li>
+            <li>Analizar si el requisito de ser "panameño" para conducir viola derechos laborales de extranjeros</li>
+            <li>Revisar si el decreto viola el derecho al trabajo y a la libre empresa</li>
+            <li>Identificar qué actores o asociaciones tienen legitimidad para impugnar el decreto</li>
+            <li>Anticipar las líneas de argumentación ante la Corte Suprema</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">07</div>
+        <div class="step-content">
+          <div class="step-titulo">Seguimiento de la Revisión Presidencial</div>
+          <div class="step-texto">La reunión convocada para el 20 de abril de 2026 es un momento crítico. La transparencia del proceso y sus resultados dirán mucho sobre quién realmente tiene el poder en este conflicto.</div>
+          <ul class="step-items-list">
+            <li>Documentar quiénes asisten a la reunión del 20 de abril y bajo qué criterio fueron convocados</li>
+            <li>Verificar si se permite la presencia de representantes de conductores independientes</li>
+            <li>Monitorear si el decreto se deroga, modifica o se mantiene sin cambios</li>
+            <li>Analizar si el "apagón de conductores" del lunes presiona o influye en la decisión presidencial</li>
+            <li>Rastrear si aparecen nuevas versiones del decreto con cambios cosméticos sin sustancia</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 05 CONFLICTOS DE INTERÉS ══════ -->
+  <div class="section" id="conflictos">
+    <h2 class="section-title">Conflictos de <span>Interés</span> Identificados</h2>
+    <p class="section-intro">El análisis forense revela múltiples capas de posibles conflictos de interés. Se presentan ordenados por nivel de evidencia disponible y potencial de daño institucional.</p>
+
+    <div class="conflicto-card">
+      <div class="conflicto-header">
+        <div>
+          <div class="conflicto-nombre">Captura Regulatoria por Gremios de Transporte Tradicional</div>
+          <div class="conflicto-rol">Actor: Sindicatos de transporte · Beneficiario: Organizaciones prestatarias</div>
+        </div>
+        <span class="nivel-badge nivel-critico">🔴 CRÍTICO</span>
+      </div>
+      <div class="conflicto-desc">
+        El punto más explosivo del decreto es el requisito de que todos los conductores de plataformas deben obtener el aval de una <strong style="color:var(--crema)">organización prestataria de transporte</strong> para operar. Esto significa que los mismos gremios que durante años combatieron a Uber ahora controlan la llave de acceso del mercado. Cualquier conductor que quiera operar legalmente deberá pagar cuotas, afiliarse y someterse a estructuras gremiales que históricamente han sido opacas, politizadas y en ocasiones corruptas en Panamá. El decreto convierte a los gremios de transporte en <strong style="color:var(--crema)">porteros obligatorios del mercado digital</strong>.
+      </div>
+      <div class="preguntas-clave">
+        <h4>Preguntas clave para la investigación</h4>
+        <ul>
+          <li>¿Qué gremios específicos participaron en las reuniones del MINGOB durante los 13 meses de "consulta"?</li>
+          <li>¿Existen vínculos financieros o personales entre líderes gremiales y funcionarios del decreto?</li>
+          <li>¿Cuánto dinero anual generarán las cuotas de los nuevos conductores afiliados a las prestatarias?</li>
+          <li>¿Hay figuras políticas que tengan posiciones en directorios de organizaciones prestatarias?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="conflicto-card">
+      <div class="conflicto-header">
+        <div>
+          <div class="conflicto-nombre">Expansión de Poder Institucional de la ATTT</div>
+          <div class="conflicto-rol">Actor: Autoridad del Tránsito y Transporte Terrestre · Director: Nicolás Brea</div>
+        </div>
+        <span class="nivel-badge nivel-alto">🟠 ALTO</span>
+      </div>
+      <div class="conflicto-desc">
+        Antes del decreto, la ATTT tenía un rol limitado frente a las plataformas. Con el Decreto N.° 10, la ATTT adquiere el poder de <strong style="color:var(--crema)">fijar tarifas, emitir certificaciones, registrar y fiscalizar</strong> a toda la industria de transporte digital. Este salto de poder concentra en una sola institución —y en su director— una capacidad regulatoria enorme sobre un mercado de cientos de miles de transacciones diarias. La experiencia panameña con instituciones de este tipo muestra que la concentración de poder regulatorio sin controles adecuados es terreno fértil para la corrupción.
+      </div>
+      <div class="preguntas-clave">
+        <h4>Preguntas clave para la investigación</h4>
+        <li>¿Tiene Nicolás Brea vínculos previos con gremios de transporte o partidos de gobierno?</li>
+        <li>¿Qué contratos adjudicará la ATTT para implementar el sistema de certificados TL?</li>
+        <li>¿Tiene la ATTT capacidad real de fiscalizar a decenas de miles de conductores sin nuevas contrataciones?</li>
+        <li>¿Quién controla y audita las tasas de certificación que la ATTT recaudará?</li>
+      </div>
+    </div>
+
+    <div class="conflicto-card">
+      <div class="conflicto-header">
+        <div>
+          <div class="conflicto-nombre">Exclusión de Conductores en el Proceso de Consulta</div>
+          <div class="conflicto-rol">Actor: Ministerio de Gobierno · Afectados: ~150,000 conductores de plataformas</div>
+        </div>
+        <span class="nivel-badge nivel-alto">🟠 ALTO</span>
+      </div>
+      <div class="conflicto-desc">
+        Los conductores mismos —que son quienes directamente resultan afectados— denuncian que no fueron incluidos en el proceso de diseño del decreto. Si el MINGOB negoció durante 13 meses principalmente con <strong style="color:var(--crema)">gremios de transporte tradicional</strong> y el resultado es un decreto que beneficia a esos gremios a expensas de los conductores de plataformas, esto constituye una consulta fraudulenta. La convocatoria de protesta para el 20 de abril sugiere que la base de conductores se siente traicionada por un proceso que se hizo en su nombre pero sin su participación.
+      </div>
+      <div class="preguntas-clave">
+        <h4>Preguntas clave para la investigación</h4>
+        <li>¿Existen actas con firmas de representantes de conductores de plataformas en las reuniones del MINGOB?</li>
+        <li>¿Las plataformas Uber, inDrive y DiDi fueron invitadas formalmente a las mesas de trabajo?</li>
+        <li>¿Quién convocó las reuniones y con qué criterio se seleccionaron los participantes?</li>
+        <li>¿Existe algún documento de impacto social previo a la firma del decreto?</li>
+      </div>
+    </div>
+
+    <div class="conflicto-card">
+      <div class="conflicto-header">
+        <div>
+          <div class="conflicto-nombre">Proyecto de App del Alcalde Mizrachi</div>
+          <div class="conflicto-rol">Actor: Mayer Mizrachi, Alcalde de Panamá · Entidad: Municipio de Panamá</div>
+        </div>
+        <span class="nivel-badge nivel-moderado">🟡 MODERADO</span>
+      </div>
+      <div class="conflicto-desc">
+        El alcalde Mizrachi reaccionó al decreto anunciando que desarrollará una <strong style="color:var(--crema)">app municipal propia</strong> para modernizar taxis. Aunque su crítica al decreto es legítima desde el punto de vista de la innovación, la propuesta de crear una plataforma de transporte desde el municipio levanta sus propias preguntas: ¿qué empresa desarrollaría la app? ¿Bajo qué proceso de licitación? ¿Podría el municipio competir con Uber usando recursos públicos?
+      </div>
+      <div class="preguntas-clave">
+        <h4>Preguntas clave para la investigación</h4>
+        <li>¿Ya existe alguna empresa identificada para desarrollar la "app de taxis" municipal?</li>
+        <li>¿Hay vínculos entre Mizrachi y empresas de tecnología que se beneficiarían del contrato?</li>
+        <li>¿Tiene el municipio de Panamá competencia legal para desarrollar y operar una plataforma de transporte?</li>
+        <li>¿Es la propuesta un genuino interés público o un movimiento político en vista a las próximas elecciones?</li>
+      </div>
+    </div>
+
+    <div class="conflicto-card">
+      <div class="conflicto-header">
+        <div>
+          <div class="conflicto-nombre">Lobby Silencioso de DiDi ante el Gobierno</div>
+          <div class="conflicto-rol">Actor: DiDi (plataforma china) · Estrategia: Ausencia deliberada del debate</div>
+        </div>
+        <span class="nivel-badge nivel-moderado">🟡 MODERADO</span>
+      </div>
+      <div class="conflicto-desc">
+        Mientras Uber emitió una declaración cautelosa e inDrive fue muy crítica, <strong style="color:var(--crema)">DiDi no ha emitido ningún pronunciamiento público</strong>. En conflictos regulatorios, el silencio de un actor importante raramente es accidental. DiDi podría estar negociando condiciones preferenciales de forma silenciosa, o incluso haber tenido acceso previo al contenido del decreto para adaptarse antes de su publicación. Su eventual posicionamiento como la plataforma que cumple con la nueva regulación la colocaría en ventaja competitiva frente a Uber e inDrive.
+      </div>
+      <div class="preguntas-clave">
+        <h4>Preguntas clave para la investigación</h4>
+        <li>¿Tuvo DiDi reuniones previas con funcionarios del MINGOB o ATTT antes de la firma del decreto?</li>
+        <li>¿Existe alguna empresa intermediaria (consultora, lobby) que represente a DiDi ante el gobierno panameño?</li>
+        <li>¿DiDi tiene contactos directos con líderes de las organizaciones prestatarias que el decreto favorece?</li>
+        <li>¿Está DiDi ya en proceso de cumplir con los requisitos del Decreto N.° 10 antes de que sea obligatorio?</li>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 06 CONCLUSIONES ══════ -->
+  <div class="section" id="conclusiones">
+    <h2 class="section-title"><span>Conclusiones</span> del Análisis</h2>
+    <p class="section-intro">El análisis forense del Decreto N.° 10 revela un patrón que va más allá de un simple acto regulatorio. Los hallazgos apuntan hacia una convergencia de intereses políticos, gremiales y económicos que debe ser investigada con rigor.</p>
+
+    <div class="conclusion-box">
+      <div class="conclusion-titulo">⚖️ Hallazgo 1: Captura Regulatoria con Alta Probabilidad</div>
+      <div class="conclusion-texto">
+        El diseño del Decreto N.° 10 favorece estructuralmente a los gremios de transporte tradicional al convertirlos en intermediarios obligatorios entre el Estado y los conductores de plataformas. El resultado no es la "modernización" del sistema, sino la imposición de los esquemas del transporte analógico sobre la economía digital. Esto es consistente con el patrón clásico de captura regulatoria: grupos de interés organizados que logran que la regulación pública los beneficie a expensas del bienestar general.
+      </div>
+    </div>
+
+    <div class="conclusion-box">
+      <div class="conclusion-titulo">📋 Hallazgo 2: Base Legal Cuestionable y Alto Riesgo de Inconstitucionalidad</div>
+      <div class="conclusion-texto">
+        La Corte Suprema ya declaró inconstitucional el decreto anterior (331 de 2017) por no respetar la Ley 14 de 1993. El Decreto N.° 10 invoca la misma ley —diseñada en 1993, antes del internet— para regular plataformas digitales del siglo XXI. El uso de una ley analógica como base normativa para regular la economía digital no solo es técnicamente cuestionable, sino que reproduce exactamente el vicio constitucional que tumbó el decreto anterior. Es previsible que enfrente impugnaciones ante la Corte Suprema.
+      </div>
+    </div>
+
+    <div class="conclusion-box">
+      <div class="conclusion-titulo">👥 Hallazgo 3: Proceso de Consulta No Incluyente</div>
+      <div class="conclusion-texto">
+        Los 13 meses de "trabajo sostenido" que menciona la ministra Montalvo aparentemente se realizaron principalmente con representantes del transporte tradicional, no con los conductores de plataformas ni con las empresas tecnológicas. Un decreto que afecta directa y negativamente a los actores no consultados es éticamente cuestionable y políticamente insostenible, como lo demuestra la rapidez con que el presidente Mulino tuvo que anunciar su revisión apenas 48 horas después de su firma.
+      </div>
+    </div>
+
+    <div class="conclusion-box">
+      <div class="conclusion-titulo">🔍 Hallazgo 4: Concentración de Poder en la ATTT sin Mecanismos de Control</div>
+      <div class="conclusion-texto">
+        El decreto transforma a la ATTT en el árbitro absoluto del mercado de transporte digital. Sin un sistema robusto de rendición de cuentas, transparencia en la fijación de tarifas y supervisión de las certificaciones, este poder concentrado crea riesgos graves de corrupción burocrática. La historia del transporte panameño está marcada por la opacidad en la gestión de concesiones, permisos y cupos.
+      </div>
+    </div>
+
+    <div class="conclusion-box">
+      <div class="conclusion-titulo">📊 Hallazgo 5: Impacto Económico Regresivo sobre la Población Vulnerable</div>
+      <div class="conclusion-texto">
+        Si el 95% de los conductores actuales no puede cumplir con los nuevos requisitos —como advierte inDrive—, el decreto eliminará una fuente de ingresos flexible para decenas de miles de familias panameñas. Simultáneamente, la reducción de oferta de conductores elevaría precios y tiempos de espera para usuarios de bajos y medianos ingresos. El decreto tiene un perfil de política pública regresiva: protege a grupos organizados con mayor poder político a expensas de trabajadores informales y consumidores.
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div style="background:var(--gris-medio);border:1px solid #333;border-radius:4px;padding:28px;">
+      <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--crema);margin-bottom:16px">🔭 Próximos pasos recomendados</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        <div style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.25);border-radius:4px;padding:16px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--rojo);letter-spacing:2px;margin-bottom:8px">INMEDIATO</div>
+          <div style="font-size:13px;color:#ccc;line-height:1.6">Solicitar acceso a la información pública sobre las reuniones de consulta del MINGOB. Identificar lista completa de participantes y actas firmadas.</div>
+        </div>
+        <div style="background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.2);border-radius:4px;padding:16px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amarillo);letter-spacing:2px;margin-bottom:8px">CORTO PLAZO</div>
+          <div style="font-size:13px;color:#ccc;line-height:1.6">Revisar declaraciones juradas de bienes de Nicolás Brea (ATTT) y Dinoska Montalvo (MINGOB). Buscar vínculos con organizaciones prestatarias de transporte.</div>
+        </div>
+        <div style="background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.2);border-radius:4px;padding:16px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#27ae60;letter-spacing:2px;margin-bottom:8px">MEDIANO PLAZO</div>
+          <div style="font-size:13px;color:#ccc;line-height:1.6">Analizar el impacto económico cuantitativo sobre conductores y usuarios. Presentar ante la Asamblea Nacional o la Defensoría del Pueblo si se confirma el carácter regresivo.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-brand">
+    Elaborado por <strong>AST System Computer Technology</strong> · ast-pty.com · Panamá, República de Panamá
+  </div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#444;letter-spacing:1px">
+    Análisis basado en fuentes públicas · Infobae, La Prensa, TVN, La Estrella · 18 Abril 2026
+  </div>
+</footer>
+
+<script>
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top: document.querySelector('nav').offsetTop - 10, behavior: 'smooth'});
+}
+</script>
+</body>
+</html>
